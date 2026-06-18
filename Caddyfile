@@ -1,0 +1,19 @@
+{
+    # Provide your global registration email
+    email mohamed.w.nossirat@gmail.com
+
+    # Point directly to ZeroSSL's unrestricted ACME directory
+    acme_ca https://acme.zerossl.com/v2/DV90
+}
+
+malnossi.ddns.net {
+    # Handle static files first
+    root * /var/www/html
+    file_server
+
+    # Fallback all unhandled endpoints (like /whip/* and /whep/*) directly to the Rust container
+    @rpc_routes {
+        path /whip/* /whep/*
+    }
+    reverse_proxy @rpc_routes aura-server:8080
+}

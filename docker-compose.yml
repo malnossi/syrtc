@@ -1,0 +1,50 @@
+services:
+  aura-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: aura_server
+    restart: unless-stopped
+    environment:
+      - ENV=production
+      - EXTERNAL_IP=malnossi.ddns.net
+      - RUST_LOG=info
+    ports:
+      # Expose ONLY the single UDP multiplexed port for WebRTC Media to the host router.
+      # Port 8080 (HTTP signaling) is intentionally NOT exposed to the public network,
+      # it will be accessed internally by the Caddy reverse proxy.
+      - "50000:50000/udp"
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: aura_caddy
+    restart: unless-stopped
+    ports:
+      # Expose standard HTTP/HTTPS ports for Let's Encrypt validation and Web traffic
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - .:/var/www/html:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - aura-server
+
+  coturn:
+    image: coturn/coturn:alpine
+    container_name: aura_coturn
+    restart: unless-stopped
+    ports:
+      - "3478:3478"
+      - "3478:3478/udp"
+    command:
+      - "-n"
+      - "--lt-cred-mech"
+      - "--user=aurauser:aurapassword"
+      - "--realm=malnossi.ddns.net"
+      - "--external-ip=malnossi.ddns.net"
+
+volumes:
+  caddy_data:
+  caddy_config:

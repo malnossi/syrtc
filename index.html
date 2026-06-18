@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AuraWebRTC | Live Audio</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0b0c10;
+            --surface-color: rgba(31, 40, 51, 0.7);
+            --accent-primary: #45a29e;
+            --accent-secondary: #66fcf1;
+            --text-primary: #ffffff;
+            --text-secondary: #c5c6c7;
+            --error-color: #ff4b4b;
+            --success-color: #00e676;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(circle at 50% 50%, #1f2833 0%, #0b0c10 100%);
+            overflow: hidden;
+        }
+
+        .container {
+            background: var(--surface-color);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 24px;
+            padding: 3rem;
+            width: 90%;
+            max-width: 480px;
+            text-align: center;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            transform: translateY(0);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .container:hover {
+            transform: translateY(-5px);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, var(--accent-secondary) 0%, var(--accent-primary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -1px;
+        }
+
+        p.subtitle {
+            color: var(--text-secondary);
+            font-size: 1rem;
+            margin-bottom: 2.5rem;
+            font-weight: 300;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 50px;
+            background: rgba(255, 255, 255, 0.05);
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 2rem;
+            transition: all 0.3s ease;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--text-secondary);
+            transition: background-color 0.3s ease;
+        }
+
+        .status-dot.live {
+            background-color: var(--success-color);
+            box-shadow: 0 0 10px var(--success-color);
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.error {
+            background-color: var(--error-color);
+            box-shadow: 0 0 10px var(--error-color);
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 230, 118, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(0, 230, 118, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 230, 118, 0); }
+        }
+
+        .btn {
+            background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+            color: var(--bg-color);
+            border: none;
+            padding: 1rem 2rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 12px;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(102, 252, 241, 0.3);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 252, 241, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(1px);
+        }
+
+        .btn:disabled {
+            background: #333;
+            color: #777;
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+        }
+
+        /* Abstract Background Elements */
+        .bg-shape {
+            position: absolute;
+            filter: blur(100px);
+            z-index: -1;
+            opacity: 0.5;
+            border-radius: 50%;
+            animation: float 10s infinite ease-in-out alternate;
+        }
+
+        .shape1 {
+            width: 300px;
+            height: 300px;
+            background: rgba(69, 162, 158, 0.4);
+            top: -100px;
+            left: -100px;
+        }
+
+        .shape2 {
+            width: 400px;
+            height: 400px;
+            background: rgba(31, 40, 51, 0.8);
+            bottom: -200px;
+            right: -100px;
+            animation-delay: -5s;
+        }
+
+        @keyframes float {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(30px, 50px) scale(1.1); }
+        }
+
+        #visualizer {
+            width: 100%;
+            height: 60px;
+            margin-top: 2rem;
+            display: none;
+            align-items: flex-end;
+            justify-content: center;
+            gap: 4px;
+        }
+
+        .bar {
+            width: 6px;
+            background-color: var(--accent-secondary);
+            border-radius: 3px 3px 0 0;
+            height: 5px;
+            transition: height 0.1s ease;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="bg-shape shape1"></div>
+    <div class="bg-shape shape2"></div>
+
+    <div class="container">
+        <h1>AuraWebRTC</h1>
+        <p class="subtitle">Ultra-Low-Latency Audio Stream</p>
+        
+        <div class="status-badge" id="statusBadge">
+            <div class="status-dot" id="statusDot"></div>
+            <span id="statusText">Disconnected</span>
+        </div>
+
+        <button class="btn" id="connectBtn">Connect & Listen Live</button>
+        
+        <div id="visualizer">
+            <!-- Bars will be injected via JS -->
+        </div>
+    </div>
+
+    <!-- Hidden audio element strictly for playback -->
+    <audio id="remoteAudio" autoplay hidden></audio>
+
+    <script>
+        const connectBtn = document.getElementById('connectBtn');
+        const statusText = document.getElementById('statusText');
+        const statusDot = document.getElementById('statusDot');
+        const remoteAudio = document.getElementById('remoteAudio');
+        const visualizer = document.getElementById('visualizer');
+
+        let peerConnection = null;
+        let audioCtx = null;
+
+        function updateStatus(state, message) {
+            statusText.innerText = message;
+            statusDot.className = 'status-dot';
+            if (state === 'live') {
+                statusDot.classList.add('live');
+                connectBtn.innerText = 'Connected';
+                connectBtn.disabled = true;
+                visualizer.style.display = 'flex';
+                initVisualizerMock();
+            } else if (state === 'error') {
+                statusDot.classList.add('error');
+                connectBtn.innerText = 'Retry Connection';
+                connectBtn.disabled = false;
+                visualizer.style.display = 'none';
+            } else {
+                connectBtn.innerText = 'Connecting...';
+                connectBtn.disabled = true;
+            }
+        }
+
+        // Just a mock CSS visualizer to look cool while playing
+        function initVisualizerMock() {
+            visualizer.innerHTML = '';
+            for(let i=0; i<15; i++) {
+                const bar = document.createElement('div');
+                bar.className = 'bar';
+                visualizer.appendChild(bar);
+            }
+            setInterval(() => {
+                if(peerConnection && peerConnection.connectionState === 'connected') {
+                    const bars = document.querySelectorAll('.bar');
+                    bars.forEach(bar => {
+                        bar.style.height = Math.floor(Math.random() * 50 + 10) + 'px';
+                    });
+                }
+            }, 100);
+        }
+
+        async function startWebRTC() {
+            updateStatus('connecting', 'Negotiating ICE Candidates...');
+
+            // Initialize standard WebRTC targeting custom self-hosted STUN/TURN
+            peerConnection = new RTCPeerConnection({
+                iceServers: [
+                    { urls: "stun:malnossi.ddns.net:3478" },
+                    { 
+                        urls: "turn:malnossi.ddns.net:3478?transport=udp", 
+                        username: "aurauser", 
+                        credential: "aurapassword" 
+                    },
+                    { 
+                        urls: "turn:malnossi.ddns.net:3478?transport=tcp", 
+                        username: "aurauser", 
+                        credential: "aurapassword" 
+                    }
+                ]
+            });
+
+            // Bind the incoming track to the hidden audio element
+            peerConnection.ontrack = (event) => {
+                if (event.track.kind === 'audio') {
+                    remoteAudio.srcObject = event.streams[0];
+                }
+            };
+
+            peerConnection.onconnectionstatechange = () => {
+                console.log("State:", peerConnection.connectionState);
+                if (peerConnection.connectionState === 'connected') {
+                    updateStatus('live', 'Live Stream Active');
+                } else if (peerConnection.connectionState === 'failed' || peerConnection.connectionState === 'disconnected') {
+                    updateStatus('error', 'Connection Lost');
+                }
+            };
+
+            // 2. Enforce Strict WebKit SDP Transceiver Layout
+            // Must happen synchronously before createOffer to generate valid m=audio line in Safari
+            peerConnection.addTransceiver('audio', { direction: 'recvonly' });
+
+            const offer = await peerConnection.createOffer();
+            await peerConnection.setLocalDescription(offer);
+
+            // 3. Streamline ICE Gathering for Mobile Subnets
+            // Wait for ICE gathering to complete before sending SDP (Single-pass signaling)
+            await new Promise((resolve) => {
+                if (peerConnection.iceGatheringState === 'complete') {
+                    resolve();
+                } else {
+                    peerConnection.onicegatheringstatechange = () => {
+                        if (peerConnection.iceGatheringState === 'complete') {
+                            resolve();
+                        }
+                    };
+                }
+            });
+
+            updateStatus('connecting', 'Establishing WHEP Session...');
+
+            try {
+                // Dispatch SDP Offer to our WHEP egress endpoint
+                const response = await fetch(`${window.location.origin}/whep/egress`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/sdp' },
+                    body: peerConnection.localDescription.sdp
+                });
+
+                if (!response.ok) throw new Error('WHEP Server rejected offer');
+
+                const answerSdp = await response.text();
+
+                // Bind the returned remote SDP Answer
+                await peerConnection.setRemoteDescription(new RTCSessionDescription({
+                    type: 'answer',
+                    sdp: answerSdp
+                }));
+
+            } catch (error) {
+                console.error("Signaling Error:", error);
+                updateStatus('error', 'Server Unreachable');
+            }
+        }
+
+        connectBtn.addEventListener('click', () => {
+            // 1. Bound User-Gesture for Audio Context (Safari / iOS Trap)
+            // We must explicitly resume or instantiate an AudioContext synchronously in the click handler
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (!audioCtx) {
+                audioCtx = new AudioContext();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+
+            // Immediately touch the audio player interaction state before any async await yields
+            remoteAudio.play().catch(e => console.log("Audio play deferred:", e));
+            
+            startWebRTC();
+        });
+    </script>
+</body>
+</html>
